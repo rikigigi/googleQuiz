@@ -1,4 +1,4 @@
-/*   Riccardo Bertossa, (c) 2017, 2018, 2019, 2020
+/*   Riccardo Bertossa, (c) 2017-2022
  *   
  *   Crea e gestisce i test degli arbitri
  *   genera automaticamente il questionario e la presentazione con le domande e le risposte
@@ -6,16 +6,45 @@
  *   implementa un sistema di valutazione della domanda
 */
 
+function onOpen(){
+  sscq=SpreadsheetApp.getActiveSpreadsheet();
+  var menuentries=[]
+  menuentries.push(
+    {name:"Prepare new quiz from selected questions", functionName: "prepare_new_quiz_from_selected"},
+    {name:"Generate the quiz and the presentation", functionName: "make_a_new_quiz"},
+    {name:"Collect the statistics from the quiz", functionName: "write_statistics"},
+    {name:"Write the results in the database", functionName:"get_mail_scores"}
+
+  );
+
+  sscq.addMenu("UG Quiz",menuentries);
+}
 
 function calcNline_approx(str) {
         return Math.floor(str.length / 80) +1
 }
 
 function prepare_new_quiz_from_selected(){
-  var question_bank_ID = 'INSERT ID'
-  var sscq = SpreadsheetApp.openById(question_bank_ID);
+  var ui = SpreadsheetApp.getUi();
+  var sscq=SpreadsheetApp.getActiveSpreadsheet();
+  var response = ui.alert('Create a new sheet? (If no I will use the last one)', ui.ButtonSet.YES_NO);
+
+  sscq=SpreadsheetApp.getActiveSpreadsheet();
+  // Process the user's response.
+  if (response == ui.Button.YES) {
+    var testcq=sscq.insertSheet(sscq.getSheets().length);
+    testcq.setName("new test");
+    testcq.getRange(1,1).setValue("name of quiz");
+    testcq.getRange(1,2).setValue(Utilities.formatDate(new Date(), "GMT+1", "dd/MM/yyyy"));
+  } 
+  //var question_bank_ID = '1Gl09LCA9Ak929hnYKZYiPciIaYlCVxwSLqBXi3AYzpw'
+  //var sscq = SpreadsheetApp.openById(question_bank_ID);
   var sheetcq = sscq.getSheets()[0];
   var testcq = sscq.getSheets()[sscq.getSheets().length-1];
+
+
+
+
   var color_selection='#ffe599'
   
   var id_domande = new Array();
@@ -98,13 +127,20 @@ for(var j=2;j<=n_domande_database+1;j++){
 function make_a_new_quiz() {
 
 
+  var sscq=SpreadsheetApp.getActiveSpreadsheet();
   
-  var question_bank_ID = 'INSERT ID'
- 
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert('Create a new quiz from the last sheet? ', ui.ButtonSet.YES_NO);
+  if (response != ui.Button.YES) {
+    return;
+  } 
   
-  var quiz_template_ID = 'INSERT ID'
-  var quiz_scritto_template_ID = 'INSERT ID';
-  var sscq = SpreadsheetApp.openById(question_bank_ID);
+  //var quiz_template_ID = '1-mkkTE_VPef2-giqCQDw-_rY9T5_2FWPD2Qrg_9drXc'
+  //var quiz_scritto_template_ID = '1Q9fygmB33E7juATYaWe_Ti6fn2845YhkhZHylL0YrZs';
+  var quiz_template_ID = '1-mkkTE_VPef2-giqCQDw-_rY9T5_2FWPD2Qrg_9drXc'
+  var quiz_scritto_template_ID = '1Q9fygmB33E7juATYaWe_Ti6fn2845YhkhZHylL0YrZs';
+  var template_presentazioni='1lQmQ0GkdVXcI-2dR-KEL8h1QMd_U3DxL2HocTlHqn2g';
+  //var sscq = SpreadsheetApp.openById(question_bank_ID);
 
   var sheetcq = sscq.getSheets()[0];
   var testcq = sscq.getSheets()[sscq.getSheets().length-1];
@@ -151,10 +187,13 @@ function make_a_new_quiz() {
   Logger.log(description);
   Logger.log(questions_answers);
   
-  var slides=SlidesApp.create(title);
+  //var slides=SlidesApp.create(title);
   var master_quiz = DriveApp.getFileById(quiz_template_ID);
   var master_quiz_scritto = DriveApp.getFileById(quiz_scritto_template_ID);
- 
+  var master_presentazione = DriveApp.getFileById(template_presentazioni);
+
+  var slides = SlidesApp.openById(master_presentazione.makeCopy(title).getId());
+
  var quiz_scritto = master_quiz_scritto.makeCopy(title);
  var test_scritto = DocumentApp.openById(quiz_scritto.getId());
  
@@ -273,7 +312,7 @@ function make_a_new_quiz() {
 
 function slide_test() {
 
-      var current_slides=SlidesApp.openById('INSERT ID')
+      var current_slides=SlidesApp.openById('1c9XYSH4JFXuFiOlPURRnlbWB86fsU7cQDVNzEU-MLXM')
       var current_slide=current_slides.getSlides()[0];
       
       
@@ -306,12 +345,22 @@ function write_statistics(){
  * ricordarsi di modificare quiz_id
 */
 
+  var sscq=SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt("Please enter the quiz id (get it from the address bar of the quiz)");
+  var quiz_id=response.getResponseText();
+  var quiz;
+  try {
+    quiz=FormApp.openById(quiz_id);
+  } catch (e) {
+    ui.alert('Invalid quiz id');
+    return;
+  }
+  //var question_bank_ID = '1Gl09LCA9Ak929hnYKZYiPciIaYlCVxwSLqBXi3AYzpw'
+  //   var quiz_id= '1UNzzQCNL5_aERRJoiOViGxDVT11fqXMMDGEYUYwKYmU';//'1IRCObPYPzBTGUP-cSf-lj-SA_h-tvG-dI5vT2fjZBi8';//'1AwGeZCcAF8rCBKrJixghPu8AQy8bqF6os-yfO2uE2r0';//'1AwGeZCcAF8rCBKrJixghPu8AQy8bqF6os-yfO2uE2r0';
 
   
-  var question_bank_ID = 'INSERT ID'
-     var quiz_id= 'INSERT ID';
-  
-  var sscq = SpreadsheetApp.openById(question_bank_ID);
+  //var sscq = SpreadsheetApp.openById(question_bank_ID);
 
   var sheetcq = sscq.getSheets()[0];
   var testcq = sscq.getSheets()[sscq.getSheets().length-1];
@@ -350,8 +399,6 @@ function write_statistics(){
   // legge il numero di domande sbagliate e calcola la percentuale di errori
   
 
- 
-  var quiz=FormApp.openById(quiz_id);
 
   var tot_score_answer=[];
   var score_answer=[];
@@ -374,7 +421,7 @@ function write_statistics(){
   var questions_answers = new Array();
   //popola le domande e le risposte dalla lista delle domande
   for(var i=0;i<id_domande.length;i++) {
-    for(var j=1;j<=n_domande_database;j++){
+    for(var j=2;j<=n_domande_database+2;j++){
       if(sheetcq.getSheetValues(j,1, 1, 1)[0][0]===id_domande[i]){
       
       //scrive le statistiche
@@ -398,15 +445,39 @@ function get_mail_scores(){
   * se necessario modificare la scheda risultati
  */
 
-  var quiz_id='INSERT ID';
-  var question_bank_ID = 'INSERT ID';
+ // var quiz_id='1I3vnQ9riopuFA9QQJ-prZHimhfIaUf_OwwjM-fbJfDw';
+ // var quiz_id='1tIU2KJUf0cHfrhgSdEbMd9iZVJ1uviAr5EU4KzmSY64';
+ // quiz_id='1dwbitVZrbmVIa9ifV4aZ60cIcC0dji2652-an3hIqSA';
+ // var quiz_id='1I3vnQ9riopuFA9QQJ-prZHimhfIaUf_OwwjM-fbJfDw';
+ // var quiz_id='1OV68kZD0LLsvGdvWiSrzMeI9fWcZw86DH-hH4rbnXjk';
+  //var quiz_id='1AwGeZCcAF8rCBKrJixghPu8AQy8bqF6os-yfO2uE2r0';
+  //var question_bank_ID = '1Gl09LCA9Ak929hnYKZYiPciIaYlCVxwSLqBXi3AYzpw';
  
-  var quiz=FormApp.openById(quiz_id);
-  var sscq = SpreadsheetApp.openById(question_bank_ID);
+  //var quiz=FormApp.openById(quiz_id);
+  //var sscq = SpreadsheetApp.openById(question_bank_ID);
+
+
+  var sscq=SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt("Please enter the quiz id (get it from the address bar of the quiz)");
+  var quiz_id=response.getResponseText();
+  var quiz;
+  try {
+    quiz=FormApp.openById(quiz_id);
+  } catch (e) {
+    ui.alert('Invalid quiz id');
+    return;
+  }
+
   risultati=sscq.getSheetByName("Contatti");
   
-  var colonna_punteggi=9;
-
+  //var colonna_punteggi=9;
+  var response = ui.prompt("Enter the first row that the code will start to fill");
+  var colonna_punteggi = parseInt(response.getResponseText());
+  if (isNaN(colonna_punteggi) || colonna_punteggi<=0) {
+    ui.alert("You must enter a positive number. You entered"+response.getResponseText());
+    return;
+  }
 
 
   
@@ -548,6 +619,5 @@ function get_mail_scores(){
   
   
 }
-
 
 
